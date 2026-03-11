@@ -1,4 +1,4 @@
-import { notifications } from "@mantine/notifications";
+import { toast } from 'sonner';
 import { IconX } from "@tabler/icons-react";
 import { appDataDir, resolve } from "@tauri-apps/api/path";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -71,24 +71,23 @@ export async function getChessComAccount(player: string): Promise<ChessComStats 
   const response = await fetch(url, { headers, method: "GET" });
   if (!response.ok) {
     error(`Failed to fetch Chess.com account: ${response.status} ${response.url}`);
-    notifications.show({
-      title: "Failed to fetch Chess.com account",
-      message: `Could not find account "${player}" on chess.com`,
-      color: "red",
-      icon: <IconX />,
-    });
+    toast.error(
+      'Failed to fetch Chess.com account',
+      {
+        description: `Could not find account "${player}" on chess.com`,
+      }
+    );
     return null;
   }
   const data = await response.json();
   const stats = ChessComStatsSchema.safeParse(data);
   if (!stats.success) {
     error(`Invalid response for Chess.com account: ${response.status} ${response.url}\n${stats.error}`);
-    notifications.show({
-      title: "Failed to fetch Chess.com account",
-      message: `Invalid response for "${player}" on chess.com`,
-      color: "red",
-      icon: <IconX />,
-    });
+    toast.error(
+      'Failed to fetch Chess.com account',
+      { description: `Invalid response for "${player}" on chess.com` }
+
+    );
     return null;
   }
   return stats.data;
@@ -121,12 +120,13 @@ export async function fetchLastChessComGames(
       error(`Failed to fetch games from ${lastArchiveUrl}: ${response.status}`);
       // Only show notification if explicitly requested
       if (showErrorNotification) {
-        notifications.show({
-          title: "Fetch Error",
-          message: `Could not fetch recent games for ${player}.`,
-          color: "red",
-          icon: <IconX />,
-        });
+        toast.error(
+          'Fetch Error',
+          {
+            description: `Could not fetch recent games for ${player}.`
+          }
+
+        );
       }
       return [];
     }
@@ -137,12 +137,11 @@ export async function fetchLastChessComGames(
       error(`Invalid game data from ${lastArchiveUrl}: ${gamesData.error}`);
       // Only show notification if explicitly requested
       if (showErrorNotification) {
-        notifications.show({
-          title: "Fetch Error",
-          message: `Could not fetch recent games for ${player}.`,
-          color: "red",
-          icon: <IconX />,
-        });
+        toast.error(
+          'Fetch Error',
+          { description: `Could not fetch recent games for ${player}.` }
+
+        );
       }
       return [];
     }
@@ -152,12 +151,11 @@ export async function fetchLastChessComGames(
     error(`Error fetching last chess.com games for ${player}: ${e}`);
     // Only show notification if explicitly requested
     if (showErrorNotification) {
-      notifications.show({
-        title: "Fetch Error",
-        message: `Could not fetch recent games for ${player}.`,
-        color: "red",
-        icon: <IconX />,
-      });
+      toast.error(
+        'Fetch Error',
+        { description: `Could not fetch recent games for ${player}.` }
+
+      );
     }
     return [];
   }
@@ -188,12 +186,11 @@ export async function downloadChessCom(player: string, timestamp: number | null)
 
     if (!games.success) {
       error(`Failed to fetch Chess.com games: ${response.status} ${response.url}`);
-      notifications.show({
-        title: "Failed to fetch Chess.com games",
-        message: `Could not find games for "${player}" on chess.com for ${archive}`,
-        color: "red",
-        icon: <IconX />,
-      });
+      toast.error(
+        'Failed to fetch Chess.com games',
+        { description: `Could not find games for "${player}" on chess.com for ${archive}` }
+
+      );
       if (response.status === 404) continue;
       return;
     }
@@ -245,12 +242,10 @@ export async function getChesscomGame(gameURL: string) {
 
   if (!response.ok) {
     error(`Failed to fetch Chess.com game: ${response.status} ${response.url}`);
-    notifications.show({
-      title: "Failed to fetch Chess.com game",
-      message: `Could not find game "${gameURL}" on chess.com`,
-      color: "red",
-      icon: <IconX />,
-    });
+    toast.error(
+      'Failed to fetch Chess.com game',
+      { description: `Could not find game "${gameURL}" on chess.com` }
+    );
     return null;
   }
 
@@ -260,12 +255,10 @@ export async function getChesscomGame(gameURL: string) {
 
   if (!parsedResponse.success) {
     error(`Invalid response for Chess.com game: ${response.status} ${response.url}\n${parsedResponse.error}`);
-    notifications.show({
-      title: "Failed to fetch Chess.com game",
-      message: `Invalid response for "${gameURL}" on chess.com`,
-      color: "red",
-      icon: <IconX />,
-    });
+    toast.error(
+      'Failed to fetch Chess.com game',
+      { description: `Invalid response for "${gameURL}" on chess.com` }
+    );
     return null;
   }
 

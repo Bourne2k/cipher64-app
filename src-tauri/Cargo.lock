@@ -540,15 +540,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "btoi"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b5ab9db53bcda568284df0fd39f6eac24ad6f7ba7ff1168b9e76eba6576b976"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3590,7 +3581,7 @@ version = "0.11.0"
 dependencies = [
  "axum",
  "bincode",
- "btoi 0.4.3",
+ "btoi",
  "bzip2 0.4.4",
  "chrono",
  "csv",
@@ -3617,7 +3608,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
- "shakmaty 0.28.0",
+ "shakmaty",
  "specta",
  "specta-typescript",
  "strsim",
@@ -3721,10 +3712,10 @@ version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1994b0ce2a74829bff0462e229b3f0a138cfb293e22c6a65f7966ff26d304e74"
 dependencies = [
- "btoi 0.4.3",
+ "btoi",
  "circular",
  "memchr",
- "shakmaty 0.27.3",
+ "shakmaty",
 ]
 
 [[package]]
@@ -5183,20 +5174,7 @@ checksum = "f414cadc4e727893d1a3b0dca62aaef4c1c821dcbd969f0b10a92e12d684d53a"
 dependencies = [
  "arrayvec",
  "bitflags 2.10.0",
- "btoi 0.4.3",
- "nohash-hasher",
- "serde",
-]
-
-[[package]]
-name = "shakmaty"
-version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3065bdba026d0a3a6eb452ff174dbbd258452643a71383153abb91a8a4fc1abc"
-dependencies = [
- "arrayvec",
- "bitflags 2.10.0",
- "btoi 0.5.0",
+ "btoi",
  "nohash-hasher",
  "serde",
 ]

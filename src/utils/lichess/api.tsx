@@ -1,5 +1,5 @@
 import type { Color } from "@lichess-org/chessground/types";
-import { notifications } from "@mantine/notifications";
+import { toast } from 'sonner';
 import { IconX } from "@tabler/icons-react";
 import { appDataDir, resolve } from "@tauri-apps/api/path";
 import { fetch } from "@tauri-apps/plugin-http";
@@ -220,12 +220,10 @@ export async function getLichessAccount({
   }
   if (!response.ok) {
     error(`Failed to fetch Lichess account: ${response.status} ${response.url}`);
-    notifications.show({
-      title: "Failed to fetch Lichess account",
-      message: `Could not find account "${username}" on lichess.org`,
-      color: "red",
-      icon: <IconX />,
-    });
+    toast.error(
+      'Failed to fetch Lichess account',
+      { description: `Could not find account "${username}" on lichess.org` }
+    );
     return null;
   }
   return response.json();
@@ -271,12 +269,10 @@ export async function fetchLastLichessGames(
     error(`Error fetching last Lichess games for ${username}: ${e}`);
     // Only show notification if explicitly requested
     if (showErrorNotification) {
-      notifications.show({
-        title: "Fetch Error",
-        message: `Could not fetch recent games for ${username} from Lichess.`,
-        color: "red",
-        icon: <IconX />,
-      });
+      toast.error(
+        'Fetch Error',
+        { description: `Could not fetch recent games for ${username} from Lichess.` }
+      );
     }
     return [];
   }

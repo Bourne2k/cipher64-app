@@ -1,4 +1,4 @@
-import { notifications } from "@mantine/notifications";
+import { toast } from 'sonner';
 import { IconX } from "@tabler/icons-react";
 import { error } from "@tauri-apps/plugin-log";
 
@@ -9,11 +9,9 @@ export function unwrap<T>(result: Result<T, string>): T {
     return result.data;
   }
   error(result.error);
-  notifications.show({
-    title: "Error",
-    message: result.error,
-    color: "red",
-    icon: <IconX />,
-  });
+  toast.error(
+    'Error',
+    { description: result.error }
+  );
   throw new Error(result.error);
 }

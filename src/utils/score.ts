@@ -1,4 +1,3 @@
-import { minMax } from "@tiptap/react";
 import type { Color } from "chessops";
 import { match } from "ts-pattern";
 import type { BestMoves, Score, ScoreValue } from "@/bindings";
@@ -12,6 +11,7 @@ export const INITIAL_SCORE: Score = {
   wdl: null,
 };
 
+const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 const CP_CEILING = 1000;
 
 // Thresholds for considering a position "hopeless"
@@ -57,7 +57,7 @@ export function normalizeScore(score: ScoreValue, color: Color): number {
     cp = CP_CEILING * Math.sign(cp);
   }
 
-  return minMax(cp, -CP_CEILING, CP_CEILING);
+  return clamp(cp, -CP_CEILING, CP_CEILING);
 }
 
 function normalizeScores(prev: ScoreValue, next: ScoreValue, color: Color): { prevCP: number; nextCP: number } {
@@ -69,7 +69,7 @@ function normalizeScores(prev: ScoreValue, next: ScoreValue, color: Color): { pr
 
 export function getAccuracy(prev: ScoreValue, next: ScoreValue, color: Color): number {
   const { prevCP, nextCP } = normalizeScores(prev, next, color);
-  return minMax(103.1668 * Math.exp(-0.04354 * (getWinChance(prevCP) - getWinChance(nextCP))) - 3.1669 + 1, 0, 100);
+  return clamp(103.1668 * Math.exp(-0.04354 * (getWinChance(prevCP) - getWinChance(nextCP))) - 3.1669 + 1, 0, 100);
 }
 
 export function getCPLoss(prev: ScoreValue, next: ScoreValue, color: Color): number {

@@ -1,28 +1,27 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
-import { RightDock } from '@/components/RightDock'; // NEW IMPORT
+import { RightDock } from '@/components/RightDock';
 import { TopBar } from '@/components/TopBar';
+import { TooltipProvider } from '@/components/ui/tooltip'; // <-- Import added
 
 export const Route = createRootRoute({
   component: () => (
     <ThemeProvider defaultTheme="dark" storageKey="cipher64-theme">
-      {/* Notice the flex-row layout here now puts content left, dock right */}
-      <div className="flex h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
+      <TooltipProvider delayDuration={200}> {/* <-- Wrapper added */}
 
-        {/* Main Content Area */}
-        <div className="flex flex-1 flex-col overflow-hidden relative">
-          <TopBar />
-          <main className="flex-1 overflow-auto bg-muted/10 relative">
-            <Outlet />
-          </main>
+        <div className="flex h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
+          <div className="flex flex-1 flex-col overflow-hidden relative">
+            <TopBar />
+            <main className="flex-1 overflow-auto bg-muted/10 relative">
+              <Outlet />
+            </main>
+          </div>
+          <RightDock />
         </div>
 
-        {/* The new Right-Side Navigation Dock */}
-        <RightDock />
-
-      </div>
-      <Toaster position="bottom-right" theme="dark" />
+        <Toaster position="bottom-right" theme="dark" />
+      </TooltipProvider>
     </ThemeProvider>
   ),
 });
