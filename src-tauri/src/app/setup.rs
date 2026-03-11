@@ -1,8 +1,7 @@
-use tauri::App;
+use tauri::{App, Manager}; // <-- Add Manager trait here
 
 use crate::app::platform;
 
-/// Shared app setup logic for both desktop and mobile
 pub fn setup_tauri_app(
     app: &App,
     specta_builder: &tauri_specta::Builder,
@@ -12,6 +11,12 @@ pub fn setup_tauri_app(
     platform::init_platform(app)?;
 
     specta_builder.mount_events(app);
+
+    // --- FORCE WINDOW VISIBILITY ---
+    if let Some(window) = app.get_webview_window("main") {
+        window.show().unwrap();
+        window.set_focus().unwrap();
+    }
 
     let _ = log::info!("Finished tauri application initialization");
     Ok(())

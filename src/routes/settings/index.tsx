@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useAtom } from 'jotai';
 import {
-  boardThemeAtom,
-  pieceThemeAtom,
-  playSoundsAtom,
-  volumeAtom,
+  boardImageAtom as boardThemeAtom,  // <-- Alias legacy name
+  pieceSetAtom as pieceThemeAtom,    // <-- Alias legacy name
+  playSoundsAtom,                    // <-- The new one we just created
+  soundVolumeAtom as volumeAtom,     // <-- Alias legacy name
   showCoordinatesAtom
 } from '@/state/atoms';
-import { EngineSettingsCard } from '@/features/engines/components/EngineSettingsCard.tsx';
+import { EngineSettingsCard } from '@/features/engines/components/EngineSettingsCard'; // Removed .tsx extension
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -25,6 +25,11 @@ function SettingsPage() {
   const [playSounds, setPlaySounds] = useAtom(playSoundsAtom);
   const [volume, setVolume] = useAtom(volumeAtom);
   const [showCoords, setShowCoords] = useAtom(showCoordinatesAtom);
+
+  // Helper mappings for the UI components
+  const isCoordsVisible = showCoords !== 'none';
+  const toggleCoords = (checked: boolean) => setShowCoords(checked ? 'inside' : 'none');
+  const displayVolume = Math.round(volume * 100); // Convert 0.8 to 80 for Slider
 
   return (
     <div className="mx-auto max-w-4xl p-6 space-y-8 h-full">
@@ -57,10 +62,10 @@ function SettingsPage() {
                       <SelectValue placeholder="Select a board" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="blue-marble">Midnight Blue (Premium)</SelectItem>
-                      <SelectItem value="wood">Classic Wood</SelectItem>
-                      <SelectItem value="maple">Light Maple</SelectItem>
-                      <SelectItem value="green-plastic">Tournament Green</SelectItem>
+                      <SelectItem value="blue-marble.jpg">Midnight Blue (Premium)</SelectItem>
+                      <SelectItem value="wood.jpg">Classic Wood</SelectItem>
+                      <SelectItem value="maple.jpg">Light Maple</SelectItem>
+                      <SelectItem value="green-plastic.png">Tournament Green</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -86,7 +91,8 @@ function SettingsPage() {
                   <Label className="text-base">Board Coordinates</Label>
                   <p className="text-sm text-muted-foreground">Show ranks and files on the edge of the board.</p>
                 </div>
-                <Switch checked={showCoords} onCheckedChange={setShowCoords} />
+                {/* Use the mapped boolean functions here */}
+                <Switch checked={isCoordsVisible} onCheckedChange={toggleCoords} />
               </div>
 
             </CardContent>
@@ -113,12 +119,13 @@ function SettingsPage() {
               <div className="space-y-4 rounded-lg border p-4 shadow-sm">
                 <div className="flex justify-between">
                   <Label className="text-base">Master Volume</Label>
-                  <span className="text-sm text-muted-foreground">{volume}%</span>
+                  <span className="text-sm text-muted-foreground">{displayVolume}%</span>
                 </div>
+                {/* Use the mapped volume here */}
                 <Slider
                   disabled={!playSounds}
-                  value={[volume]}
-                  onValueChange={(val) => setVolume(val[0])}
+                  value={[displayVolume]}
+                  onValueChange={(val) => setVolume(val[0] / 100)}
                   max={100}
                   step={1}
                 />

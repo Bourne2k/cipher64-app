@@ -109,7 +109,7 @@ export const soundCollectionAtom = atomWithStorage<string>("sound-collection", "
 export const soundVolumeAtom = atomWithStorage<number>("sound-volume", 0.8, undefined, {
   getOnInit: true,
 });
-
+export const playSoundsAtom = atomWithStorage<boolean>("play-sounds", true);
 export const pieceSetAtom = atomWithStorage<string>("piece-set", "staunty");
 export const boardImageAtom = atomWithStorage<string>("board-image", "gray.svg");
 export const blindfoldAtom = atomWithStorage<boolean>("blindfold-mode", false);
@@ -457,3 +457,10 @@ export const enableAllAtom = atom(null, (get, set, value: boolean) => {
     set(atom, { ...get(atom), enabled: value });
   }
 });
+// ============================================================================
+// CIPHER64 ENGINE SETTINGS
+// ============================================================================
+export const engineHashAtom = atomWithStorage<number>("engine-hash", 128);
+export const engineThreadsAtom = atomWithStorage<number>("engine-threads", 4);
+export const engineMultiPvAtom = atomWithStorage<number>("engine-multipv", 1);
+export const activeEngineIdAtom = atomWithStorage<string>("active-engine-id", "stockfish-16.1");

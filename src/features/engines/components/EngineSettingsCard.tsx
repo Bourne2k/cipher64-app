@@ -7,7 +7,7 @@ import { Cpu, HardDrive, ListTree, Zap } from 'lucide-react';
 
 // NOTE: Ensure these atom names match exactly what you copied into src/state/atoms.ts
 // If they differ slightly in your copied pawnappetit state, just rename the imports!
-import {
+import  {
     engineHashAtom,
     engineThreadsAtom,
     engineMultiPvAtom,

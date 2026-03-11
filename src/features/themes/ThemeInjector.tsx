@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { useAtomValue } from 'jotai';
-import { pieceThemeAtom } from '@/state/atoms';
+// Change this line:
+import { pieceSetAtom as pieceThemeAtom } from '@/state/atoms';
 
 export function ThemeInjector() {
     const pieceTheme = useAtomValue(pieceThemeAtom);
 
     useEffect(() => {
-        // Dynamically load the CSS file for the selected piece theme
         const linkId = 'cg-piece-theme';
         let link = document.getElementById(linkId) as HTMLLinkElement;
 

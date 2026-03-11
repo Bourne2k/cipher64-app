@@ -1,15 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
-import './index.css'; // This imports our Tailwind v4 setup
+import { getCurrentWindow } from '@tauri-apps/api/window'; // <-- 1. Import this
+import './index.css';
 
-// Import the auto-generated route tree
 import { routeTree } from './routeTree.gen';
 
-// Create a new router instance
 const router = createRouter({ routeTree });
 
-// Register the router instance for type safety across the app
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
@@ -21,3 +19,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <RouterProvider router={router} />
   </React.StrictMode>
 );
+
+// <-- 2. Add this block to show the window after render
+// We use a small timeout to ensure the DOM is painted
+setTimeout(() => {
+  getCurrentWindow().show();
+}, 100);
