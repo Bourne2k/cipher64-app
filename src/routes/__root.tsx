@@ -1,34 +1,27 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
-import { Sidebar } from '@/components/Sidebar';
+import { RightDock } from '@/components/RightDock'; // NEW IMPORT
 import { TopBar } from '@/components/TopBar';
 
 export const Route = createRootRoute({
   component: () => (
     <ThemeProvider defaultTheme="dark" storageKey="cipher64-theme">
-      {/* App Shell: Flex row to separate Sidebar from Main Content */}
+      {/* Notice the flex-row layout here now puts content left, dock right */}
       <div className="flex h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
 
-        {/* Left Navigation */}
-        <Sidebar />
-
-        {/* Right Area: TopBar + Page Content */}
+        {/* Main Content Area */}
         <div className="flex flex-1 flex-col overflow-hidden relative">
-
-          {/* Draggable Window Controls */}
           <TopBar />
-
-          {/* Main Content Area (Outlet renders the child routes here) */}
           <main className="flex-1 overflow-auto bg-muted/10 relative">
-            <ThemeInjector />
             <Outlet />
           </main>
-
         </div>
-      </div>
 
-      {/* Global Toast Notifications */}
+        {/* The new Right-Side Navigation Dock */}
+        <RightDock />
+
+      </div>
       <Toaster position="bottom-right" theme="dark" />
     </ThemeProvider>
   ),

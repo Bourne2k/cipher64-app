@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useAtom } from 'jotai';
-import { 
-  boardThemeAtom, 
-  pieceThemeAtom, 
-  playSoundsAtom, 
-  volumeAtom, 
-  showCoordinatesAtom 
+import {
+  boardThemeAtom,
+  pieceThemeAtom,
+  playSoundsAtom,
+  volumeAtom,
+  showCoordinatesAtom
 } from '@/state/atoms';
-
+import { EngineSettingsCard } from '@/features/engines/components/EngineSettingsCard.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -48,7 +48,7 @@ function SettingsPage() {
               <CardDescription>Select your preferred chessboard aesthetic.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              
+
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Board Style</Label>
@@ -101,7 +101,7 @@ function SettingsPage() {
               <CardDescription>Configure move and capture sounds.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              
+
               <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
                 <div className="space-y-0.5">
                   <Label className="text-base">Enable Sounds</Label>
@@ -115,12 +115,12 @@ function SettingsPage() {
                   <Label className="text-base">Master Volume</Label>
                   <span className="text-sm text-muted-foreground">{volume}%</span>
                 </div>
-                <Slider 
+                <Slider
                   disabled={!playSounds}
-                  value={[volume]} 
-                  onValueChange={(val) => setVolume(val[0])} 
-                  max={100} 
-                  step={1} 
+                  value={[volume]}
+                  onValueChange={(val) => setVolume(val[0])}
+                  max={100}
+                  step={1}
                 />
               </div>
 
@@ -128,21 +128,9 @@ function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* --- ENGINE & COACH TAB (Placeholder for Phase 4) --- */}
+        {/* --- ENGINE & COACH TAB  --- */}
         <TabsContent value="engine" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Coach & Engine Settings</CardTitle>
-              <CardDescription>Configure Stockfish threads, hash size, and Coach explanations.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center p-8 border border-dashed rounded-lg bg-muted/20">
-                <p className="text-muted-foreground text-sm">
-                  Coach integration will be wired up in Phase 4.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <EngineSettingsCard />
         </TabsContent>
 
       </Tabs>
