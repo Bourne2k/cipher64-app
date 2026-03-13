@@ -464,3 +464,4 @@ export const engineHashAtom = atomWithStorage<number>("engine-hash", 128);
 export const engineThreadsAtom = atomWithStorage<number>("engine-threads", 4);
 export const engineMultiPvAtom = atomWithStorage<number>("engine-multipv", 1);
 export const activeEngineIdAtom = atomWithStorage<string>("active-engine-id", "stockfish-16.1");
+export const boardOrientationAtom = atomWithStorage<"white" | "black">("board-orientation", "white");

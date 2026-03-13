@@ -17,24 +17,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Play, Bot } from 'lucide-react';
 
+// 1. MUST EXPORT ROUTE for TanStack Router to work
 export const Route = createFileRoute('/play')({
   component: PlayPage,
 });
 
 function PlayPage() {
-  const [fen] = useState('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3');
+  // 2. State for the board
+  const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   const [isPremium] = useState(true);
 
   return (
     <div className="flex h-full w-full gap-4 p-4 overflow-hidden bg-background">
 
       {/* --- LEFT COLUMN: The Board & Eval Bar --- */}
-      <div className="flex-1 flex items-center justify-center min-w-[400px] gap-2">
-        <div className="h-full max-h-[800px] py-1">
+      <div className="flex-1 flex items-center justify-center p-4 gap-4 h-full overflow-hidden min-w-[300px]">
+        {/* Eval Bar Container */}
+        <div className="h-full max-h-[85vh] py-0">
           <EvalBar score={1.2} />
         </div>
-        <div className="w-full max-w-[800px] aspect-square rounded-md overflow-hidden shadow-2xl ring-1 ring-border">
-          <Chessground config={{ fen }} />
+
+        {/* Board Container */}
+        <div className="w-full max-w-[85vh] aspect-square flex-shrink-0 shadow-2xl ring-1 ring-border/50 rounded-sm overflow-hidden relative">
+          {/* 3. FIX: Properly passing FEN and setFen to our updated Chessground */}
+          <Chessground 
+            fen={fen} 
+            setBoardFen={setFen}
+            movable={{ color: 'both', free: true }} 
+          />
         </div>
       </div>
 
@@ -82,7 +92,8 @@ function PlayPage() {
             </div>
 
             <div className="flex-1 min-h-[250px] shadow-sm">
-              <BestMovesCard />
+              {/* 4. FIX: Passing the currentFen to the Engine card so Rust doesn't crash */}
+              <BestMovesCard currentFen={fen} />
             </div>
 
             <div className="flex-shrink-0 mb-4 shadow-sm">

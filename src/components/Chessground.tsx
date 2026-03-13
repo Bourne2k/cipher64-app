@@ -1,49 +1,135 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chessground as NativeChessground } from '@lichess-org/chessground';
 import type { Api } from '@lichess-org/chessground/api';
 import type { Config } from '@lichess-org/chessground/config';
+import type { Key, Piece } from '@lichess-org/chessground/types';
 import { useAtomValue } from 'jotai';
 
-import  { boardImageAtom as boardThemeAtom, pieceSetAtom as pieceThemeAtom, showCoordinatesAtom } from '@/state/atoms';
+// Aliasing the legacy atoms just like we did in Settings
+import {
+    boardImageAtom as boardThemeAtom,
+    moveMethodAtom,
+    boardOrientationAtom
+} from '@/state/atoms';
 
-
-interface ChessgroundProps {
-    config?: Config;
-    className?: string;
-    onInitialize?: (api: Api) => void;
+export interface ChessgroundProps extends Config {
+    setBoardFen?: (fen: string) => void;
+    selectedPiece?: Piece | null;
+    setSelectedPiece?: (piece: Piece | null) => void;
 }
 
-export function Chessground({ config, className = '', onInitialize }: ChessgroundProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
+export function Chessground({
+    setBoardFen,
+    selectedPiece,
+    setSelectedPiece,
+    ...chessgroundConfig
+}: ChessgroundProps) {
     const [api, setApi] = useState<Api | null>(null);
-
-    const boardTheme = useAtomValue(boardThemeAtom);
-    const pieceTheme = useAtomValue(pieceThemeAtom);
-    const showCoords = useAtomValue(showCoordinatesAtom);
-
-    useEffect(() => {
-        if (containerRef.current && !api) {
-            const cgApi = NativeChessground(containerRef.current, {
-                ...config,
-                coordinates: showCoords,
-            });
-            setApi(cgApi);
-            if (onInitialize) onInitialize(cgApi);
-        }
-    }, [api, config, onInitialize, showCoords]);
+    const ref = useRef<HTMLDivElement>(null);
+    const moveMethod = useAtomValue(moveMethodAtom);
+    const boardImage = useAtomValue(boardThemeAtom);
+    const orientation = useAtomValue(boardOrientationAtom);
+    const setBoardFenRef = useRef(setBoardFen);
+    const setSelectedPieceRef = useRef(setSelectedPiece);
 
     useEffect(() => {
-        if (api) {
-            api.set({ ...config, coordinates: showCoords });
-        }
-    }, [api, config, showCoords]);
+        setBoardFenRef.current = setBoardFen;
+        setSelectedPieceRef.current = setSelectedPiece;
+    });
 
-    const themeClasses = `cg-board-${boardTheme} cg-pieces-${pieceTheme}`;
+    const handleChange = useCallback(() => {
+        if (setBoardFenRef.current && api) {
+            setBoardFenRef.current(api.getFen());
+        }
+    }, [api]);
+
+    const handleSelect = useCallback((key: Key) => {
+        if (chessgroundConfig.movable?.free && selectedPiece && api) {
+            api.setPieces(new Map([[key, selectedPiece]]));
+            if (setBoardFenRef.current) {
+                setBoardFenRef.current(api.getFen());
+            }
+        }
+    }, [chessgroundConfig.movable?.free, selectedPiece, api]);
+
+    // Initial mount
+    useEffect(() => {
+        if (!ref.current || api) return;
+
+        const config: Config = {
+            ...chessgroundConfig,
+            orientation,
+            addDimensionsCssVarsTo: ref.current,
+            events: {
+                ...chessgroundConfig.events,
+                change: handleChange,
+                select: handleSelect,
+            },
+            draggable: {
+                ...chessgroundConfig.draggable,
+                enabled: moveMethod !== 'select',
+            },
+            selectable: {
+                ...chessgroundConfig.selectable,
+                enabled: moveMethod !== 'drag',
+            },
+        };
+
+        const chessgroundApi = NativeChessground(ref.current, config);
+        setApi(chessgroundApi);
+
+        return () => {
+            chessgroundApi.destroy?.();
+            setApi(null);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Update config on prop changes
+    useEffect(() => {
+        if (!api) return;
+
+        const config: Config = {
+            ...chessgroundConfig,
+            orientation,
+            events: {
+                ...chessgroundConfig.events,
+                change: handleChange,
+                select: handleSelect,
+            },
+            draggable: {
+                ...chessgroundConfig.draggable,
+                enabled: moveMethod !== 'select',
+            },
+            selectable: {
+                ...chessgroundConfig.selectable,
+                enabled: moveMethod !== 'drag',
+            },
+        };
+
+        api.set(config);
+    }, [
+        api,
+        handleChange,
+        handleSelect,
+        moveMethod,
+        chessgroundConfig
+    ]);
+
+    useEffect(() => {
+        if (!chessgroundConfig.movable?.free && selectedPiece && setSelectedPieceRef.current) {
+            setSelectedPieceRef.current(null);
+        }
+    }, [chessgroundConfig.movable?.free, selectedPiece]);
 
     return (
         <div
-            ref={containerRef}
-            className={`w-full h-full aspect-square ${themeClasses} ${className}`}
+            ref={ref}
+            className="w-full h-full"
+            style={{
+                aspectRatio: '1 / 1',
+                '--board-image': `url('/board/${boardImage}')`,
+            } as React.CSSProperties}
         />
     );
 }

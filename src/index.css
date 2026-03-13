@@ -47,3 +47,10 @@
     overflow: hidden;
   }
 }
+@layer components {
+  /* This maps the React style prop directly to the Chessground canvas */
+  cg-board {
+    background-image: var(--board-image) !important;
+    background-size: cover;
+  }
+}
