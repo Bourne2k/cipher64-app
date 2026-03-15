@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 const NAV_ITEMS = [
     { icon: Home, label: 'Dashboard', to: '/' },
-    { icon: Cpu, label: 'Play & Analyze', to: '/play' },
+    { icon: Cpu, label: 'Play & Analyze', to: '/boards' }, // <--- FIXED THIS TO POINT TO /boards
     { icon: Database, label: 'Databases', to: '/databases' },
     { icon: BookOpen, label: 'Learn', to: '/learn' },
     { icon: Settings, label: 'Settings', to: '/settings' },
@@ -38,12 +38,11 @@ export function RightDock() {
                     ))}
                 </nav>
 
-                {/* Bottom Account Action */}
                 <div className="mt-auto flex flex-col gap-4">
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Link
-                                to="/accounts"
+                                to="/"
                                 className="group flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[status=active]:text-primary"
                             >
                                 <UserCircle className="h-5 w-5" />

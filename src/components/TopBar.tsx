@@ -1,9 +1,10 @@
 import { Minus, Square, X } from 'lucide-react';
-import { Window } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Button } from '@/components/ui/button';
 
 export function TopBar() {
-  const appWindow = new Window('main');
+  // FIX: Grab the existing window context instead of creating a new one!
+  const appWindow = getCurrentWindow();
 
   const minimize = () => appWindow.minimize();
   const toggleMaximize = () => appWindow.toggleMaximize();
@@ -20,7 +21,7 @@ export function TopBar() {
       </div>
 
       {/* Window Controls - Excluded from drag region */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 z-50">
         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" onClick={minimize}>
           <Minus className="h-4 w-4" />
         </Button>

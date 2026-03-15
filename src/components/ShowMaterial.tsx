@@ -5,42 +5,51 @@ import Piece from "./Piece";
 import { cn } from "@/lib/utils";
 
 interface ShowMaterialProps {
-    diff: number;
-    pieces: Role[];
-    color: Color;
+  diff?: number;
+  pieces?: Role[] | Record<string, number>;
+  color: Color;
 }
 
-function ShowMaterial({ diff, pieces, color }: ShowMaterialProps) {
-    // If there's no material advantage and no pieces captured, render nothing
-    if (diff === 0 && pieces.length === 0) return null;
+function ShowMaterial({ diff = 0, pieces, color }: ShowMaterialProps) {
+  // Robust piece extraction: convert objects to arrays safely
+  let piecesArray: Role[] = [];
+  
+  if (Array.isArray(pieces)) {
+    piecesArray = pieces;
+  } else if (pieces && typeof pieces === 'object') {
+    Object.entries(pieces).forEach(([role, count]) => {
+      for (let i = 0; i < (count as number); i++) {
+        piecesArray.push(role as Role);
+      }
+    });
+  }
 
-    return (
-        <div className="flex items-center ml-2 h-6 gap-0.5 opacity-90">
-            {/* Captured Pieces */}
-            <div className="flex items-center -space-x-1.5">
-                {pieces.map((role, i) => (
-                    <div key={`${role}-${i}`} className="w-4 h-4 sm:w-5 sm:h-5">
-                        <Piece
-                            piece={{
-                                role,
-                                color: color === "white" ? "black" : "white", // Captured pieces are the opposite color
-                            }}
-                        />
-                    </div>
-                ))}
-            </div>
+  if (diff === 0 && piecesArray.length === 0) return null;
 
-            {/* Material Advantage Score */}
-            {diff > 0 && (
-                <span className={cn(
-                    "ml-1.5 text-[11px] font-bold font-mono",
-                    color === "white" ? "text-foreground/70" : "text-foreground/70" // Can adjust colors based on theme if needed
-                )}>
-                    +{diff}
-                </span>
-            )}
-        </div>
-    );
+  return (
+    <div className="flex items-center ml-2 h-6 gap-0.5 opacity-90">
+      <div className="flex items-center -space-x-1.5">
+        {piecesArray.map((role, i) => (
+          <div key={`${role}-${i}`} className="w-4 h-4 sm:w-5 sm:h-5">
+            <Piece
+              piece={{
+                role,
+                color: color === "white" ? "black" : "white",
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      {diff > 0 && (
+        <span className={cn(
+          "ml-1.5 text-[11px] font-bold font-mono",
+          color === "white" ? "text-foreground/70" : "text-foreground/70" 
+        )}>
+          +{diff}
+        </span>
+      )}
+    </div>
+  );
 }
 
 export default memo(ShowMaterial);

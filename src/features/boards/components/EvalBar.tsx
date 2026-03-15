@@ -1,30 +1,34 @@
 import { cn } from '@/lib/utils';
+import { memo } from 'react';
 
 interface EvalBarProps {
-    score: number; // e.g., 1.5 (White is winning) or -2.3 (Black is winning)
-    mate?: number; // e.g., 3 (Mate in 3)
-    isFlipped?: boolean; // If black is at the bottom
+    score: number | null;
+    mate?: number; 
+    orientation?: "white" | "black"; 
 }
 
-export function EvalBar({ score, mate, isFlipped = false }: EvalBarProps) {
+const EvalBarComponent = ({ score, mate, orientation = "white" }: EvalBarProps) => {
+    // Safely handle null scores (assume 0.0 / equal position)
+    const safeScore = score ?? 0;
+    const isFlipped = orientation === "black";
+
     // Calculate percentage fill (clamp between 5% and 95% unless mate)
     let percent = 50;
 
-    if (mate !== undefined) {
+    if (mate !== undefined && mate !== null) {
         percent = mate > 0 ? 100 : 0;
     } else {
         // A standard sigmoid-like curve for chess evaluation
-        // +5 is generally winning (~95%), 0 is equal (50%)
-        percent = 50 + (50 * (2 / (1 + Math.exp(-0.4 * score)) - 1));
+        percent = 50 + (50 * (2 / (1 + Math.exp(-0.4 * safeScore)) - 1));
         percent = Math.max(5, Math.min(95, percent));
     }
 
     // If board is flipped, invert the bar
     const whiteHeight = isFlipped ? (100 - percent) : percent;
 
-    const displayScore = mate !== undefined
+    const displayScore = mate !== undefined && mate !== null
         ? `M${Math.abs(mate)}`
-        : Math.abs(score).toFixed(1);
+        : Math.abs(safeScore).toFixed(1);
 
     return (
         <div className="relative flex h-full w-6 flex-col overflow-hidden rounded-sm border border-border bg-[#2b2b2b]">
@@ -45,4 +49,8 @@ export function EvalBar({ score, mate, isFlipped = false }: EvalBarProps) {
             </div>
         </div>
     );
-}
+};
+
+// FIX: We now export it BOTH as a named export AND a default export!
+export const EvalBar = memo(EvalBarComponent);
+export default EvalBar;
