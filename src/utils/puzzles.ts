@@ -1,9 +1,10 @@
 import { appDataDir, resolve } from "@tauri-apps/api/path";
-import { loadDirectories } from "@/App";
-import { commands, type PuzzleDatabaseInfo } from "@/bindings";
+import { commands, type PuzzleDatabaseInfo } from "@/bindings/generated";
 import type { FileInfoMetadata, FileMetadata } from "@/features/files/utils/file";
 import { logger } from "./logger";
 import { unwrap } from "./unwrap";
+
+// Removed import from "@/App" and replaced with direct Rust command to fetch the document directory
 
 export const PUZZLE_DEBUG_LOGS = false;
 
@@ -31,8 +32,7 @@ export const ADAPTIVE_EASY_MAX_PROB = 0.8;
 
 // Helper functions to get data from different sections
 async function getDatabasesFromDatabasesSection(): Promise<PuzzleDatabaseInfo[]> {
-  const { readDir } = await import("@tauri-apps/plugin-fs");
-  const { BaseDirectory } = await import("@tauri-apps/plugin-fs");
+  const { readDir, BaseDirectory } = await import("@tauri-apps/plugin-fs");
 
   let dbPuzzles: PuzzleDatabaseInfo[] = [];
 
@@ -43,10 +43,13 @@ async function getDatabasesFromDatabasesSection(): Promise<PuzzleDatabaseInfo[]>
     dbPuzzles = (await Promise.allSettled(dbs.map((db) => getPuzzleDatabase(db.name))))
       .filter((r) => r.status === "fulfilled")
       .map((r) => (r as PromiseFulfilledResult<PuzzleDatabaseInfo>).value);
-    logger.debug(
-      "Loaded puzzle databases:",
-      dbPuzzles.map((db) => ({ title: db.title, puzzleCount: db.puzzleCount })),
-    );
+
+    if (PUZZLE_DEBUG_LOGS) {
+      logger.debug(
+        "Loaded puzzle databases:",
+        dbPuzzles.map((db) => ({ title: db.title, puzzleCount: db.puzzleCount })),
+      );
+    }
   } catch (err) {
     logger.error("Error loading .db3 puzzles:", err);
   }
@@ -55,15 +58,19 @@ async function getDatabasesFromDatabasesSection(): Promise<PuzzleDatabaseInfo[]>
 }
 
 async function getFilesFromFilesSection(): Promise<PuzzleDatabaseInfo[]> {
-  const { readDir } = await import("@tauri-apps/plugin-fs");
-  const { BaseDirectory } = await import("@tauri-apps/plugin-fs");
+  const { readDir, BaseDirectory } = await import("@tauri-apps/plugin-fs");
   const { processEntriesRecursively } = await import("@/features/files/utils/file");
 
   let localPuzzles: PuzzleDatabaseInfo[] = [];
 
   try {
-    const dirs = await loadDirectories();
-    const documentsDir = dirs?.documentDir;
+    // FIX: Replaced App.tsx import with direct Tauri call to your Rust backend
+    const dirsResult = await commands.loadDirectories();
+    if (dirsResult.status === "error") {
+      throw new Error(String(dirsResult.error));
+    }
+    const documentsDir = dirsResult.data.documentDir;
+
     const entries = await readDir(documentsDir, { baseDir: BaseDirectory.AppLocalData });
     const allEntries = await processEntriesRecursively(documentsDir, entries);
 
@@ -109,7 +116,7 @@ export function updateElo(
   const expected = expectedScore(playerRating, puzzleRating);
   const newRating = playerRating + kFactor * (score - expected);
 
-  PUZZLE_DEBUG_LOGS &&
+  if (PUZZLE_DEBUG_LOGS) {
     logger.debug("Elo calculation:", {
       playerRating: Math.round(playerRating),
       puzzleRating,
@@ -120,26 +127,25 @@ export function updateElo(
       newRating: Math.round(newRating),
       change: Math.round(newRating - playerRating),
     });
+  }
 
   return Math.round(newRating);
 }
 
-// Probability-based range (select puzzles that give expected success rate between minP and maxP)
 export function getPuzzleRangeProb(
   playerRating: number,
   minProb: number = PROGRESSIVE_MIN_PROB,
   maxProb: number = PROGRESSIVE_MAX_PROB,
 ): [number, number] {
-  // Invert the Elo expected score formula to find puzzle rating bounds
   const invertElo = (expected: number): number => {
     return playerRating + 400 * Math.log10(1 / expected - 1);
   };
 
-  const lowerBound = invertElo(maxProb); // easier puzzles (higher success chance)
-  const upperBound = invertElo(minProb); // harder puzzles (lower success chance)
+  const lowerBound = invertElo(maxProb);
+  const upperBound = invertElo(minProb);
   const range: [number, number] = [Math.round(lowerBound), Math.round(upperBound)];
 
-  PUZZLE_DEBUG_LOGS &&
+  if (PUZZLE_DEBUG_LOGS) {
     logger.debug("Puzzle range calculation:", {
       playerRating,
       minProb,
@@ -148,58 +154,48 @@ export function getPuzzleRangeProb(
       upperBound: Math.round(upperBound),
       range,
     });
+  }
 
   return range;
 }
 
-// Calculate adaptive probabilities based on recent performance
 export function getAdaptiveProbabilities(recentResults: Completion[]): [number, number] {
   const consecutiveFailures = recentResults.slice().reverse().indexOf("correct");
-
   const failureCount = consecutiveFailures === -1 ? recentResults.length : consecutiveFailures;
 
   let minProb = PROGRESSIVE_MIN_PROB;
   let maxProb = PROGRESSIVE_MAX_PROB;
 
   if (failureCount >= ADAPTIVE_CONSECUTIVE_FAILURES) {
-    // After 3+ failures, make much easier
     minProb = ADAPTIVE_EASY_MIN_PROB;
     maxProb = ADAPTIVE_EASY_MAX_PROB;
   }
 
-  PUZZLE_DEBUG_LOGS &&
+  if (PUZZLE_DEBUG_LOGS) {
     logger.debug("Adaptive probabilities:", {
       recentResults,
       consecutiveFailures: failureCount,
       minProb,
       maxProb,
     });
+  }
 
   return [minProb, maxProb];
 }
 
-// Enhanced progressive range with adaptive probabilities
 export function getAdaptivePuzzleRange(playerRating: number, recentResults: Completion[]): [number, number] {
   const [minProb, maxProb] = getAdaptiveProbabilities(recentResults);
-
-  // Use existing getPuzzleRangeProb with adaptive probabilities
   return getPuzzleRangeProb(playerRating, minProb, maxProb);
 }
 
 async function getPuzzleDatabase(name: string): Promise<PuzzleDatabaseInfo> {
   const appDataDirPath = await appDataDir();
   const path = await resolve(appDataDirPath, "puzzles", name);
-
   return unwrap(await commands.getPuzzleDbInfo(path));
 }
 
 export async function getPuzzleDatabases(): Promise<PuzzleDatabaseInfo[]> {
-  // Get puzzle databases from the databases section (AppData/db folder)
   const dbPuzzles = await getDatabasesFromDatabasesSection();
-
-  // Get puzzle files from the files section (document directory)
   const localPuzzles = await getFilesFromFilesSection();
-
-  // Combine both types of puzzle sources
   return [...dbPuzzles, ...localPuzzles];
 }
