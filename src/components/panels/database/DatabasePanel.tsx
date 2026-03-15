@@ -1,101 +1,268 @@
-import { useContext } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAtom, useAtomValue } from "jotai";
+import { memo, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { match } from "ts-pattern";
 import { useStore } from "zustand";
-import { Database, Search } from "lucide-react";
-
 import { TreeStateContext } from "@/components/TreeStateContext";
+import {
+  currentDbTabAtom,
+  currentDbTypeAtom,
+  currentLocalOptionsAtom,
+  currentTabAtom,
+  lichessOptionsAtom,
+  masterOptionsAtom,
+  referenceDbAtom,
+} from "@/state/atoms";
+import { type Opening, searchPosition } from "@/utils/db";
+import { convertToNormalized, getLichessGames, getMasterGames } from "@/utils/lichess/api";
+import type { LichessGamesOptions, MasterGamesOptions } from "@/utils/lichess/explorer";
+import DatabaseLoader from "./DatabaseLoader";
+import GamesTable from "./GamesTable";
+import NoDatabaseWarning from "./NoDatabaseWarning";
+import OpeningsTable from "./OpeningsTable";
+import LichessOptionsPanel from "./options/LichessOptionsPanel";
+import LocalOptionsPanel from "./options/LocalOptionsPanel";
+import MasterOptionsPanel from "./options/MastersOptionsPanel";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-// Mock data structure - hook this up to your actual local SQLite / Lichess API later
-const MOCK_MOVES = [
-  { san: "e4", games: 1245000, white: 33, draw: 41, black: 26 },
-  { san: "d4", games: 890000, white: 35, draw: 43, black: 22 },
-  { san: "Nf3", games: 450000, white: 32, draw: 45, black: 23 },
-  { san: "c4", games: 320000, white: 34, draw: 42, black: 24 },
-];
+type DBType =
+  | { type: "local"; options: LocalOptions }
+  | { type: "lch_all"; options: LichessGamesOptions; fen: string }
+  | { type: "lch_master"; options: MasterGamesOptions; fen: string };
 
-export default function DatabasePanel() {
+export type LocalOptions = {
+  path: string | null;
+  fen: string;
+  type: "exact" | "partial";
+  player: number | null;
+  color: "white" | "black";
+  start_date?: string;
+  end_date?: string;
+  result: "any" | "whitewon" | "draw" | "blackwon";
+  sort?: "id" | "date" | "whiteElo" | "blackElo" | "averageElo" | "ply_count";
+  direction?: "asc" | "desc";
+};
+
+function sortOpenings(openings: Opening[]) {
+  return openings.sort((a, b) => b.black + b.draw + b.white - (a.black + a.draw + a.white));
+}
+
+async function fetchOpening(db: DBType, tab: string) {
+  return match(db)
+    .with({ type: "lch_all" }, async ({ fen, options }) => {
+      const data = await getLichessGames(fen, options);
+      return {
+        openings: data.moves.map((move) => ({
+          move: move.san,
+          white: move.white,
+          black: move.black,
+          draw: move.draws,
+        })),
+        games: await convertToNormalized(data.topGames || data.recentGames || []),
+      };
+    })
+    .with({ type: "lch_master" }, async ({ fen, options }) => {
+      const data = await getMasterGames(fen, options);
+      return {
+        openings: data.moves.map((move) => ({
+          move: move.san,
+          white: move.white,
+          black: move.black,
+          draw: move.draws,
+        })),
+        games: await convertToNormalized(data.topGames || data.recentGames || []),
+      };
+    })
+    .with({ type: "local" }, async ({ options }) => {
+      if (!options.path) throw Error("Missing reference database");
+      const positionData = await searchPosition(options, tab);
+      return {
+        openings: sortOpenings(positionData[0]),
+        games: positionData[1],
+      };
+    })
+    .exhaustive();
+}
+
+// Replaces Mantine's useDebouncedValue hook natively
+function useDebouncedValue<T>(value: T, delay: number): [T] {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return [debouncedValue];
+}
+
+function DatabasePanel() {
   const { t } = useTranslation();
-  const store = useContext(TreeStateContext);
-  if (!store) return null;
 
-  const currentNode = useStore(store, (s) => s.currentNode());
-  const makeMove = useStore(store, (s: any) => s.makeMove); // Assuming your store has this
+  const store = useContext(TreeStateContext)!;
+  const fen = useStore(store, (s) => s.currentNode().fen);
+  const referenceDatabase = useAtomValue(referenceDbAtom);
+  const [debouncedFen] = useDebouncedValue(fen, 50);
+  const [lichessOptions] = useAtom(lichessOptionsAtom);
+  const [masterOptions] = useAtom(masterOptionsAtom);
+  const [localOptions, setLocalOptions] = useAtom(currentLocalOptionsAtom);
+  const [db, setDb] = useAtom(currentDbTypeAtom);
 
-  const handleMoveClick = (san: string) => {
-    // Implement standard SAN move execution
-    // makeMove({ payload: parseSan(pos, san) }) 
-  };
+  useEffect(() => {
+    if (db === "local") {
+      setLocalOptions((q) => ({ ...q, fen: debouncedFen }));
+    }
+  }, [debouncedFen, setLocalOptions, db]);
+
+  useEffect(() => {
+    if (db === "local") {
+      setLocalOptions((q) => ({ ...q, path: referenceDatabase }));
+    }
+  }, [referenceDatabase, setLocalOptions, db]);
+
+  const dbType: DBType = match(db)
+    .with("local", (v) => ({
+      type: v,
+      options: localOptions,
+    }))
+    .with("lch_all", (v) => ({
+      type: v,
+      options: lichessOptions,
+      fen: debouncedFen,
+    }))
+    .with("lch_master", (v) => ({
+      type: v,
+      options: masterOptions,
+      fen: debouncedFen,
+    }))
+    .exhaustive();
+
+  const tab = useAtomValue(currentTabAtom);
+  const [tabType, setTabType] = useAtom(currentDbTabAtom);
+
+  const {
+    data: openingData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["database-opening", dbType, tab?.value],
+    queryFn: async () => {
+      return fetchOpening(dbType, tab?.value || "");
+    },
+    enabled: tabType !== "options" && !!tab?.value,
+  });
+
+  const grandTotal = openingData?.openings?.reduce((acc, curr) => acc + curr.black + curr.white + curr.draw, 0);
 
   return (
-    <div className="flex flex-col h-full bg-card border border-border/50 rounded-md overflow-hidden">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border/50 shrink-0">
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground/80">
-          <Database className="w-4 h-4 text-primary" />
-          {t("features.database.explorer", "Opening Explorer")}
-        </div>
-        <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-bold">
-          Master Games
-        </div>
-      </div>
-
-      {/* Table Header */}
-      <div className="flex items-center px-3 py-1.5 bg-muted/10 border-b border-border/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
-        <div className="w-16">{t("common.move", "Move")}</div>
-        <div className="w-20 text-right pr-4">{t("common.games", "Games")}</div>
-        <div className="flex-1 text-center">{t("features.database.result", "Result")}</div>
-      </div>
-
-      {/* Scrollable Moves List */}
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col">
-          {MOCK_MOVES.map((move) => (
-            <div 
-              key={move.san} 
-              className="flex items-center px-3 py-2 border-b border-border/30 hover:bg-muted/50 cursor-pointer transition-colors"
-              onClick={() => handleMoveClick(move.san)}
+    <div className="flex flex-col h-full w-full">
+      <div className="flex items-center justify-between w-full mb-2">
+        {/* Replaces SegmentedControl */}
+        <div className="flex bg-muted p-1 rounded-md items-center">
+          {[
+            { label: t("features.board.database.local"), value: "local" },
+            { label: t("features.board.database.lichessAll"), value: "lch_all" },
+            { label: t("features.board.database.lichessMaster"), value: "lch_master" },
+          ].map((item) => (
+            <button
+              key={item.value}
+              onClick={() => setDb(item.value as "local" | "lch_all" | "lch_master")}
+              className={`flex-1 text-sm px-3 py-1.5 rounded-sm transition-all ${
+                db === item.value
+                  ? "bg-background shadow-sm text-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              <div className="w-16 font-mono font-bold text-[13px]">{move.san}</div>
-              <div className="w-20 text-right pr-4 text-[12px] text-muted-foreground">
-                {move.games.toLocaleString()}
-              </div>
-              
-              {/* Win/Draw/Loss Bar */}
-              <div className="flex-1 h-4 flex rounded-sm overflow-hidden border border-border/50 opacity-90">
-                <div 
-                  className="bg-white/90 dark:bg-white/80 h-full flex items-center justify-center text-[9px] font-bold text-black"
-                  style={{ width: `${move.white}%` }}
-                >
-                  {move.white > 15 && `${move.white}%`}
-                </div>
-                <div 
-                  className="bg-slate-400 h-full flex items-center justify-center text-[9px] font-bold text-white"
-                  style={{ width: `${move.draw}%` }}
-                >
-                  {move.draw > 15 && `${move.draw}%`}
-                </div>
-                <div 
-                  className="bg-black/80 h-full flex items-center justify-center text-[9px] font-bold text-white"
-                  style={{ width: `${move.black}%` }}
-                >
-                  {move.black > 15 && `${move.black}%`}
-                </div>
-              </div>
-            </div>
+              {item.label}
+            </button>
           ))}
-
-          {/* Empty State / Loading State mapping would go here */}
-          {MOCK_MOVES.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-              <Search className="w-6 h-6 mb-2 opacity-50" />
-              <span className="text-sm">{t("features.database.noMovesFound", "No moves found in database.")}</span>
-            </div>
-          )}
         </div>
-      </ScrollArea>
+
+        {tabType !== "options" && (
+          <span className="text-sm text-muted-foreground">
+            {t("features.board.database.matches", {
+              matches: Math.max(grandTotal || 0, openingData?.games.length || 0),
+            })}
+          </span>
+        )}
+      </div>
+
+      <DatabaseLoader isLoading={isLoading} tab={tab?.value ?? null} />
+
+      {/* Tailwind handles vertical structure to replace Mantine's vertical orientation hook */}
+      <Tabs
+        defaultValue="stats"
+        value={tabType}
+        onValueChange={(v) => setTabType(v as "stats" | "games" | "options")}
+        className="flex flex-1 overflow-hidden flex-row-reverse"
+      >
+        <TabsList className="flex flex-col h-full w-32 items-stretch justify-start rounded-none border-l bg-transparent p-0">
+          <TabsTrigger
+            value="stats"
+            disabled={dbType.type === "local" && dbType.options.type === "partial"}
+            className="data-[state=active]:bg-muted rounded-none justify-start px-4 py-2"
+          >
+            {t("features.board.database.stats")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="games"
+            className="data-[state=active]:bg-muted rounded-none justify-start px-4 py-2"
+          >
+            {t("features.board.database.games")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="options"
+            className="data-[state=active]:bg-muted rounded-none justify-start px-4 py-2"
+          >
+            {t("features.board.database.options")}
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="flex-1 overflow-hidden relative mr-2">
+          <PanelWithError value="stats" error={error} type={db}>
+            <OpeningsTable openings={openingData?.openings || []} loading={isLoading} />
+          </PanelWithError>
+          <PanelWithError value="games" error={error} type={db}>
+            <GamesTable games={openingData?.games || []} loading={isLoading} />
+          </PanelWithError>
+          <PanelWithError value="options" error={error} type={db}>
+            <ScrollArea className="h-full">
+              {match(db)
+                .with("local", () => <LocalOptionsPanel boardFen={debouncedFen} />)
+                .with("lch_all", () => <LichessOptionsPanel />)
+                .with("lch_master", () => <MasterOptionsPanel />)
+                .exhaustive()}
+            </ScrollArea>
+          </PanelWithError>
+        </div>
+      </Tabs>
     </div>
   );
 }
+
+function PanelWithError(props: { value: string; error: Error | null; type: string; children: React.ReactNode }) {
+  const referenceDatabase = useAtomValue(referenceDbAtom);
+  let children = props.children;
+  
+  if (props.type === "local" && !referenceDatabase) {
+    children = <NoDatabaseWarning />;
+  }
+  if (props.error && props.type !== "local") {
+    children = (
+      <div className="p-4 rounded-md bg-destructive/15 text-destructive border border-destructive/20 text-sm">
+        {props.error.message}
+      </div>
+    );
+  }
+
+  return (
+    <TabsContent value={props.value} className="h-full mt-0 pt-2 flex flex-col data-[state=inactive]:hidden">
+      {children}
+    </TabsContent>
+  );
+}
+
+export default memo(DatabasePanel);
